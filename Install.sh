@@ -19,7 +19,7 @@ sudo mkdir -p $STORAGE_ROOT/nomp/nomp_setup/tmp
 sudo mkdir -p $STORAGE_ROOT/nomp/site
 sudo mkdir -p $STORAGE_ROOT/nomp/starts
 sudo mkdir -p $STORAGE_ROOT/wallets
-sudo mkdir -p $HOME/multipool/daemon_builder
+sudo mkdir -p $HOME/daemon_builder
 fi
 sudo setfacl -m u:$USER:rwx $STORAGE_ROOT/nomp
 sudo setfacl -m u:$USER:rwx $STORAGE_ROOT/nomp/site
@@ -213,28 +213,20 @@ sudo chmod g+w $STORAGE_ROOT -R
 echo Web build complete...
 
 echo Download and Build coin from tar...
-
-clear
-
-# LS the SRC dir to have user input bitcoind and bitcoin-cli names
-cd $STORAGE_ROOT/daemon_builder/temp_coin_builds/$coindir/src/
-find . -maxdepth 1 -type f \( -perm -1 -o \( -perm -10 -o -perm -100 \) \) -printf "%f\n"
-read -e -p "Please enter the coind name from the directory above, example bitcoind :" coind
-read -e -p "Is there a coin-cli, example bitcoin-cli [y/N] :" ifcoincli
-
-if [[ ("$ifcoincli" == "y" || "$ifcoincli" == "Y") ]]; then
-read -e -p "Please enter the coin-cli name :" coincli
-fi
+sudo mkdir $STORAGE_ROOT/daemon_builder/veil
+sudo mkdir $STORAGE_ROOT/daemon_builder/veil/src
+cd $STORAGE_ROOT/daemon_builder/veil/
+wget https://github.com/Veil-Project/veil/releases/download/v1.0.0.10/veil-1.0.0-x86_64-linux-gnu.tar.gz
+tar xvfz veil-1.0.0-x86_64-linux-gnu.tar.gz
+cd $STORAGE_ROOT/daemon_builder/veil/veil-1.0.0/
 
 clear
 
 # Strip and copy to /usr/bin
-sudo strip $STORAGE_ROOT/daemon_builder/temp_coin_builds/$coindir/src/$coind
-sudo cp $STORAGE_ROOT/daemon_builder/temp_coin_builds/$coindir/src/$coind /usr/bin
-if [[ ("$ifcoincli" == "y" || "$ifcoincli" == "Y") ]]; then
-sudo strip $STORAGE_ROOT/daemon_builder/temp_coin_builds/$coindir/src/$coincli
-sudo cp $STORAGE_ROOT/daemon_builder/temp_coin_builds/$coindir/src/$coincli /usr/bin
-fi
+
+sudo cp $STORAGE_ROOT/daemon_builder/veil/veil-1.0.0/veild /usr/bin
+sudo cp $STORAGE_ROOT/daemon_builder/veil/veil-1.0.0/veild /usr/bin
+
 
 # Make the new wallet folder and autogenerate the coin.conf
 if [[ ! -e '$STORAGE_ROOT/wallets' ]]; then
@@ -242,7 +234,7 @@ sudo mkdir -p $STORAGE_ROOT/wallets
 fi
 
 sudo setfacl -m u:$USER:rwx $STORAGE_ROOT/wallets
-mkdir -p $STORAGE_ROOT/wallets/."${coind::-1}"
+mkdir -p $STORAGE_ROOT/wallets/.veil
 
 rpcpassword=$(openssl rand -base64 29 | tr -d "=+/")
 rpcport=$(EPHYMERAL_PORT)
@@ -256,21 +248,18 @@ rpcallowip=127.0.0.1
 maxconnections=12
 daemon=1
 gen=0
-' | sudo -E tee $STORAGE_ROOT/wallets/."${coind::-1}"/"${coind::-1}".conf >/dev/null 2>&1
-' | sudo -E tee $HOME/."${coind::-1}"/"${coind::-1}".conf >/dev/null 2>&1
-echo "Starting ${coind::-1}"
+' | sudo -E tee $STORAGE_ROOT/wallets/.veil/veil.conf >/dev/null 2>&1
+' | sudo -E tee $HOME/.veil"/veil.conf >/dev/null 2>&1
+echo "Starting Veil"
 /usr/bin/veild -generateseed=1 -daemon=1
-/usr/bin/"${coind}" -datadir=$STORAGE_ROOT/wallets/."${coind::-1}" -conf="${coind::-1}.conf" -daemon -shrinkdebugfile
-/usr/bin/"${coind}" -datadir=$HOME/."${coind::-1}" -conf="${coind::-1}.conf" -daemon -shrinkdebugfile
+/usr/bin/veild -datadir=$STORAGE_ROOT/wallets/.veil -conf=veil.conf -daemon -shrinkdebugfile
+/usr/bin/veild -datadir=$HOME/.veil -conf=veil.conf -daemon -shrinkdebugfile
 # Create easy daemon start file
 echo '
-"${coind}" -datadir=$STORAGE_ROOT/wallets/."${coind::-1}" -conf="${coind::-1}.conf" -daemon -shrinkdebugfile
-"${coind}" -datadir=$HOME/."${coind::-1}" -conf="${coind::-1}.conf" -daemon -shrinkdebugfile
-' | sudo -E tee /usr/bin/"${coind::-1}" >/dev/null 2>&1
-sudo chmod +x /usr/bin/"${coind::-1}"
-# If we made it this far everything built fine removing last coin.conf and build directory
-sudo rm -r $STORAGE_ROOT/daemon_builder/temp_coin_builds/.lastcoin.conf
-sudo rm -r $STORAGE_ROOT/daemon_builder/temp_coin_builds/$coindir
-sudo rm -r $HOME/multipool/daemon_builder/.my.cnf
+veild -datadir=$STORAGE_ROOT/wallets/.veil -conf=veil.conf -daemon -shrinkdebugfile
+veild -datadir=$HOME/.veil -conf=veil.conf -daemon -shrinkdebugfile
+' | sudo -E tee /usr/bin/veil >/dev/null 2>&1
+sudo chmod +x /usr/bin/veil
+
 echo 'rpcpassword='${rpcpassword}'
 rpcport='${rpcport}''| sudo -E tee $HOME/multipool/daemon_builder/.my.cnf
