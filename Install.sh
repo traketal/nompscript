@@ -1,3 +1,15 @@
+source functions.sh # load our functions
+# copy functions to /etc
+sudo cp -r functions.sh /etc/
+source $HOME/daemon_builder/.my.cnf
+
+if [ -z "$STORAGE_USER" ]; then
+STORAGE_USER=$([[ -z "$DEFAULT_STORAGE_USER" ]] && echo "veilnomp" || echo "$DEFAULT_STORAGE_USER")
+fi
+if [ -z "$STORAGE_ROOT" ]; then
+STORAGE_ROOT=$([[ -z "$DEFAULT_STORAGE_ROOT" ]] && echo "/home/$STORAGE_USER" || echo "$DEFAULT_STORAGE_ROOT")
+fi
+
 if ! locale -a | grep en_US.utf8 > /dev/null; then
 # Generate locale if not exists
 hide_output locale-gen en_US.UTF-8
@@ -13,7 +25,8 @@ export NCURSES_NO_UTF8_ACS=1
 
 # Create the temporary installation directory if it doesn't already exist.
 echo Creating the temporary NOMP installation folder...
-if [ ! -d $STORAGE_ROOT/nomp/ ]; then
+if [ ! -d $STORAGE_ROOT/ ]; then
+sudo mkdir -p $STORAGE_ROOT
 sudo mkdir -p $STORAGE_ROOT/nomp
 sudo mkdir -p $STORAGE_ROOT/nomp/site
 sudo mkdir -p $STORAGE_ROOT/nomp/nomp_setup
@@ -21,6 +34,7 @@ sudo mkdir -p $STORAGE_ROOT/nomp/nomp_setup/tmp
 sudo mkdir -p $STORAGE_ROOT/wallets
 sudo mkdir -p $HOME/daemon_builder
 fi
+sudo setfacl -m u:$USER:rwx $STORAGE_ROOT
 sudo setfacl -m u:$USER:rwx $STORAGE_ROOT/nomp
 sudo setfacl -m u:$USER:rwx $STORAGE_ROOT/nomp/site
 sudo setfacl -m u:$USER:rwx $STORAGE_ROOT/nomp/nomp_setup
@@ -185,8 +199,8 @@ echo Setting correct folder permissions...
 whoami=`whoami`
 sudo usermod -aG www-data $whoami
 sudo usermod -a -G www-data $whoami
-sudo usermod -a -G crypto-data $whoami
-sudo usermod -a -G crypto-data www-data
+sudo usermod -a -G veilnomp $whoami
+sudo usermod -a -G veilnomp www-data
 
 sudo find $STORAGE_ROOT/nomp/site/ -type d -exec chmod 775 {} +
 sudo find $STORAGE_ROOT/nomp/site/ -type f -exec chmod 664 {} +
@@ -224,8 +238,8 @@ rpcpassword=$(openssl rand -base64 29 | tr -d "=+/")
 rpcport=$(EPHYMERAL_PORT)
 
 echo 'rpcuser=NOMPrpc
-rpcpassword='${rpcpassword}'
-rpcport='${rpcport}'
+rpcpassword=rpcpasswordchangeme
+rpcport=14250
 rpcthreads=8
 rpcallowip=127.0.0.1
 # onlynet=ipv4
@@ -233,11 +247,11 @@ maxconnections=12
 daemon=1
 gen=0
 ' | sudo -E tee $STORAGE_ROOT/wallets/.veil/veil.conf >/dev/null 2>&1
-' | sudo -E tee $HOME/.veil"/veil.conf >/dev/null 2>&1
-echo "Starting Veil"
-/usr/bin/veild -generateseed=1 -daemon=1
-/usr/bin/veild -datadir=$STORAGE_ROOT/wallets/.veil -conf=veil.conf -daemon -shrinkdebugfile
-/usr/bin/veild -datadir=$HOME/.veil -conf=veil.conf -daemon -shrinkdebugfile
+' | sudo -E tee $HOME/.veil/veil.conf >/dev/null 2>&1
+# echo "Starting Veil"
+# /usr/bin/veild -generateseed=1 -daemon=1
+# /usr/bin/veild -datadir=$STORAGE_ROOT/wallets/.veil -conf=veil.conf -daemon -shrinkdebugfile
+# /usr/bin/veild -datadir=$HOME/.veil -conf=veil.conf -daemon -shrinkdebugfile
 # Create easy daemon start file
 echo '
 veild -datadir=$STORAGE_ROOT/wallets/.veil -conf=veil.conf -daemon -shrinkdebugfile
@@ -245,8 +259,8 @@ veild -datadir=$HOME/.veil -conf=veil.conf -daemon -shrinkdebugfile
 ' | sudo -E tee /usr/bin/veil >/dev/null 2>&1
 sudo chmod +x /usr/bin/veil
 
-echo 'rpcpassword='${rpcpassword}'
-rpcport='${rpcport}''| sudo -E tee $HOME/multipool/daemon_builder/.my.cnf
+echo 'rpcpassword=rpcpasswordchangeme
+rpcport=14250'| sudo -E tee $HOME/daemon_builder/.my.cnf
 
 # Create function for random unused port
 function EPHYMERAL_PORT(){
@@ -275,12 +289,7 @@ cd $STORAGE_ROOT/nomp/site/pool_configs
 sudo cp -r litecoin_example.json veil.json
 
 #Generate new wallet address
-if [[ ("$ifcoincli" == "y" || "$ifcoincli" == "Y") ]]; then
-wallet="$("${coind::-1}-cli" -datadir=$STORAGE_ROOT/wallets/."${coind::-1}" -conf="${coind::-1}.conf" getnewbasecoinaddress)"
-else
-wallet="$("${coind}" -datadir=$STORAGE_ROOT/wallets/."${coind::-1}" -conf="${coind::-1}.conf" getnewbasecoinaddress)"
-fi
-
+# wallet="$(veil-cli -datadir=$STORAGE_ROOT/wallets/.veil -conf="$veil.conf" getnewbasecoinaddress)"
 
 # Allow user account to bind to port 80 and 443 with out sudo privs
 apt_install authbind
@@ -288,4 +297,24 @@ sudo touch /etc/authbind/byport/80
 sudo touch /etc/authbind/byport/443
 sudo chmod 777 /etc/authbind/byport/80
 sudo chmod 777 /etc/authbind/byport/443
+
+echo Boosting server performance for NOMP...
+# Boost Network Performance by Enabling TCP BBR
+hide_output sudo apt install -y --install-recommends linux-generic-hwe-16.04
+echo 'net.core.default_qdisc=fq' | hide_output sudo tee -a /etc/sysctl.conf
+echo 'net.ipv4.tcp_congestion_control=bbr' | hide_output sudo tee -a /etc/sysctl.conf
+
+# Tune Network Stack
+echo 'net.core.wmem_max=12582912' | hide_output sudo tee -a /etc/sysctl.conf
+echo 'net.core.rmem_max=12582912' | hide_output sudo tee -a /etc/sysctl.conf
+echo 'net.ipv4.tcp_rmem= 10240 87380 12582912' | hide_output sudo tee -a /etc/sysctl.conf
+echo 'net.ipv4.tcp_wmem= 10240 87380 12582912' | hide_output sudo tee -a /etc/sysctl.conf
+echo 'net.ipv4.tcp_window_scaling = 1' | hide_output sudo tee -a /etc/sysctl.conf
+echo 'net.ipv4.tcp_timestamps = 1' | hide_output sudo tee -a /etc/sysctl.conf
+echo 'net.ipv4.tcp_sack = 1' | hide_output sudo tee -a /etc/sysctl.conf
+echo 'net.ipv4.tcp_no_metrics_save = 1' | hide_output sudo tee -a /etc/sysctl.conf
+echo 'net.core.netdev_max_backlog = 5000' | hide_output sudo tee -a /etc/sysctl.conf
+
+echo Tuning complete...
+
 
