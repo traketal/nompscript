@@ -249,7 +249,7 @@ maxconnections=12
 daemon=1
 gen=0
 ' | sudo -E tee $STORAGE_ROOT/wallets/.veil/veil.conf >/dev/null 2>&1
-' | sudo -E tee $HOME/.veil/veil.conf >/dev/null 2>&1
+# ' | sudo -E tee $HOME/.veil/veil.conf >/dev/null 2>&1
 # echo "Starting Veil"
 # /usr/bin/veild -generateseed=1 -daemon=1
 # /usr/bin/veild -datadir=$STORAGE_ROOT/wallets/.veil -conf=veil.conf -daemon -shrinkdebugfile
@@ -257,7 +257,6 @@ gen=0
 # Create easy daemon start file
 echo '
 veild -datadir=$STORAGE_ROOT/wallets/.veil -conf=veil.conf -daemon -shrinkdebugfile
-veild -datadir=$HOME/.veil -conf=veil.conf -daemon -shrinkdebugfile
 ' | sudo -E tee /usr/bin/veil >/dev/null 2>&1
 sudo chmod +x /usr/bin/veil
 
