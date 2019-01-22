@@ -236,8 +236,8 @@ fi
 sudo setfacl -m u:$USER:rwx $STORAGE_ROOT/wallets
 mkdir -p $STORAGE_ROOT/wallets/.veil
 
-rpcpassword=$(openssl rand -base64 29 | tr -d "=+/")
-rpcport=$(EPHYMERAL_PORT)
+#rpcpassword=$(openssl rand -base64 29 | tr -d "=+/")
+#rpcport=$(EPHYMERAL_PORT)
 
 echo 'rpcuser=NOMPrpc
 rpcpassword=rpcpasswordchangeme
