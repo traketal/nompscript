@@ -4,7 +4,7 @@ sudo cp -r functions.sh /etc/
 #source $HOME/daemon_builder/.my.cnf
 
 if [ -z "$STORAGE_USER" ]; then
-STORAGE_USER=$([[ -z "$DEFAULT_STORAGE_USER" ]] && echo "veilnomp" || echo "$DEFAULT_STORAGE_USER")
+STORAGE_USER=$([[ -z "$DEFAULT_STORAGE_USER" ]] && echo "nomp" || echo "$DEFAULT_STORAGE_USER")
 fi
 if [ -z "$STORAGE_ROOT" ]; then
 STORAGE_ROOT=$([[ -z "$DEFAULT_STORAGE_ROOT" ]] && echo "/home/$STORAGE_USER" || echo "$DEFAULT_STORAGE_ROOT")
