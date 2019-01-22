@@ -224,8 +224,8 @@ clear
 
 # Strip and copy to /usr/bin
 
-sudo cp $STORAGE_ROOT/daemon_builder/veil/veil-1.0.0/veild /usr/bin
-sudo cp $STORAGE_ROOT/daemon_builder/veil/veil-1.0.0/veild /usr/bin
+sudo cp $STORAGE_ROOT/daemon_builder/veil/veil-1.0.0/bin/veild /usr/bin
+sudo cp $STORAGE_ROOT/daemon_builder/veil/veil-1.0.0/bin/veil-cli /usr/bin
 
 
 # Make the new wallet folder and autogenerate the coin.conf
