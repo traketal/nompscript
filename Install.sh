@@ -13,16 +13,17 @@ export NCURSES_NO_UTF8_ACS=1
 
 # Create the temporary installation directory if it doesn't already exist.
 echo Creating the temporary NOMP installation folder...
-if [ ! -d $STORAGE_ROOT/nomp/nomp_setup ]; then
+if [ ! -d $STORAGE_ROOT/nomp/ ]; then
+sudo mkdir -p $STORAGE_ROOT/nomp
+sudo mkdir -p $STORAGE_ROOT/nomp/site
 sudo mkdir -p $STORAGE_ROOT/nomp/nomp_setup
 sudo mkdir -p $STORAGE_ROOT/nomp/nomp_setup/tmp
-sudo mkdir -p $STORAGE_ROOT/nomp/site
-sudo mkdir -p $STORAGE_ROOT/nomp/starts
 sudo mkdir -p $STORAGE_ROOT/wallets
 sudo mkdir -p $HOME/daemon_builder
 fi
 sudo setfacl -m u:$USER:rwx $STORAGE_ROOT/nomp
 sudo setfacl -m u:$USER:rwx $STORAGE_ROOT/nomp/site
+sudo setfacl -m u:$USER:rwx $STORAGE_ROOT/nomp/nomp_setup
 sudo setfacl -m u:$USER:rwx $STORAGE_ROOT/wallets
 sudo setfacl -m u:$USER:rwx $STORAGE_ROOT/nomp/nomp_setup/tmp
 
@@ -103,7 +104,6 @@ echo Initializing system random number generator...
 hide_output dd if=/dev/random of=/dev/urandom bs=1 count=32 2> /dev/null
 hide_output sudo pollinate -q -r
 
-if [ -z "$DISABLE_FIREWALL" ]; then
 # Install `ufw` which provides a simple firewall configuration.
 echo Installing UFW...
 apt_install ufw
@@ -112,22 +112,6 @@ apt_install ufw
 ufw_allow ssh;
 ufw_allow http;
 ufw_allow https;
-
-# ssh might be running on an alternate port. Use sshd -T to dump sshd's #NODOC
-# settings, find the port it is supposedly running on, and open that port #NODOC
-# too. #NODOC
-SSH_PORT=$(sshd -T 2>/dev/null | grep "^port " | sed "s/port //") #NODOC
-if [ ! -z "$SSH_PORT" ]; then
-if [ "$SSH_PORT" != "22" ]; then
-
-echo Opening alternate SSH port $SSH_PORT. #NODOC
-ufw_allow $SSH_PORT #NODOC
-
-fi
-fi
-
-sudo ufw --force enable;
-fi #NODOC
 
 echo Installing NOMP Required system packages...
 if [ -f /usr/sbin/apache2 ]; then
@@ -151,7 +135,7 @@ source ~/.profile
 hide_output nvm install 8.11.4
 hide_output nvm use 8.11.4
 echo Downloading NOMP Repo...
-hide_output sudo git clone https://github.com/traketal/node-open-mining-portal.git $STORAGE_ROOT/nomp/nomp_setup/nomp
+hide_output sudo git clone https://github.com/Larcea/node-open-mining-portal.git $STORAGE_ROOT/nomp/nomp_setup/nomp
 
 
 echo Installing Redis...
@@ -263,3 +247,45 @@ sudo chmod +x /usr/bin/veil
 
 echo 'rpcpassword='${rpcpassword}'
 rpcport='${rpcport}''| sudo -E tee $HOME/multipool/daemon_builder/.my.cnf
+
+# Create function for random unused port
+function EPHYMERAL_PORT(){
+    LPORT=32768;
+    UPORT=60999;
+    while true; do
+        MPORT=$[$LPORT + ($RANDOM % $UPORT)];
+        (echo "" >/dev/tcp/127.0.0.1/${MPORT}) >/dev/null 2>&1
+        if [ $? -ne 0 ]; then
+            echo $MPORT;
+            return 0;
+        fi
+    done
+}
+
+echo "Making the NOMPness Monster"
+
+cd $STORAGE_ROOT/nomp/site/
+
+# NPM install and update, user can ignore errors
+npm install
+npm i npm@latest -g
+
+# Create the coin pool json file
+cd $STORAGE_ROOT/nomp/site/pool_configs
+sudo cp -r litecoin_example.json veil.json
+
+#Generate new wallet address
+if [[ ("$ifcoincli" == "y" || "$ifcoincli" == "Y") ]]; then
+wallet="$("${coind::-1}-cli" -datadir=$STORAGE_ROOT/wallets/."${coind::-1}" -conf="${coind::-1}.conf" getnewbasecoinaddress)"
+else
+wallet="$("${coind}" -datadir=$STORAGE_ROOT/wallets/."${coind::-1}" -conf="${coind::-1}.conf" getnewbasecoinaddress)"
+fi
+
+
+# Allow user account to bind to port 80 and 443 with out sudo privs
+apt_install authbind
+sudo touch /etc/authbind/byport/80
+sudo touch /etc/authbind/byport/443
+sudo chmod 777 /etc/authbind/byport/80
+sudo chmod 777 /etc/authbind/byport/443
+
