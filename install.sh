@@ -1,7 +1,7 @@
 source functions.sh # load our functions
 # copy functions to /etc
 sudo cp -r functions.sh /etc/
-source $HOME/daemon_builder/.my.cnf
+#source $HOME/daemon_builder/.my.cnf
 
 if [ -z "$STORAGE_USER" ]; then
 STORAGE_USER=$([[ -z "$DEFAULT_STORAGE_USER" ]] && echo "veilnomp" || echo "$DEFAULT_STORAGE_USER")
@@ -31,6 +31,7 @@ sudo mkdir -p $STORAGE_ROOT/nomp
 sudo mkdir -p $STORAGE_ROOT/nomp/site
 sudo mkdir -p $STORAGE_ROOT/nomp/nomp_setup
 sudo mkdir -p $STORAGE_ROOT/nomp/nomp_setup/tmp
+sudo mkdir -p $STORAGE_ROOT/deamon_builder
 sudo mkdir -p $STORAGE_ROOT/wallets
 sudo mkdir -p $HOME/daemon_builder
 fi
@@ -38,6 +39,7 @@ sudo setfacl -m u:$USER:rwx $STORAGE_ROOT
 sudo setfacl -m u:$USER:rwx $STORAGE_ROOT/nomp
 sudo setfacl -m u:$USER:rwx $STORAGE_ROOT/nomp/site
 sudo setfacl -m u:$USER:rwx $STORAGE_ROOT/nomp/nomp_setup
+sudo setfacl -m u:$USER:rwx $STORAGE_ROOT/daemon_builder
 sudo setfacl -m u:$USER:rwx $STORAGE_ROOT/wallets
 sudo setfacl -m u:$USER:rwx $STORAGE_ROOT/nomp/nomp_setup/tmp
 
