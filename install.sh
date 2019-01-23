@@ -1,7 +1,6 @@
 source functions.sh # load our functions
 # copy functions to /etc
 sudo cp -r functions.sh /etc/
-#source $HOME/daemon_builder/.my.cnf
 
 if [ -z "$STORAGE_USER" ]; then
 STORAGE_USER=$([[ -z "$DEFAULT_STORAGE_USER" ]] && echo "veilnomp" || echo "$DEFAULT_STORAGE_USER")
