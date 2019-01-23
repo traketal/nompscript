@@ -247,35 +247,24 @@ rpcallowip=127.0.0.1
 maxconnections=12
 daemon=1
 gen=0
-' | sudo -E tee $STORAGE_ROOT/wallets/.veil/veil.conf >/dev/null 2>&1
+
 ' | sudo -E tee $HOME/.veil/veil.conf >/dev/null 2>&1
 echo "Starting Veil"
 /usr/bin/veild -generateseed=1
-/usr/bin/veild -datadir=$STORAGE_ROOT/wallets/.veil -conf=veil.conf -daemon -shrinkdebugfile
+
+sleep 5
+
 /usr/bin/veild -datadir=$HOME/.veil -conf=veil.conf -daemon -shrinkdebugfile
 Create easy daemon start file
+
 echo '
-veild -datadir=$STORAGE_ROOT/wallets/.veil -conf=veil.conf -daemon -shrinkdebugfile
 veild -datadir=$HOME/.veil -conf=veil.conf -daemon -shrinkdebugfile
 ' | sudo -E tee /usr/bin/veil >/dev/null 2>&1
 sudo chmod +x /usr/bin/veil
 
-echo 'rpcpassword=rpcpasswordchangeme
-rpcport=14250'| sudo -E tee $HOME/daemon_builder/.my.cnf
+# echo 'rpcpassword=rpcpasswordchangeme
+# rpcport=14250'| sudo -E tee $HOME/daemon_builder/.my.cnf
 
-# Create function for random unused port
-function EPHYMERAL_PORT(){
-    LPORT=32768;
-    UPORT=60999;
-    while true; do
-        MPORT=$[$LPORT + ($RANDOM % $UPORT)];
-        (echo "" >/dev/tcp/127.0.0.1/${MPORT}) >/dev/null 2>&1
-        if [ $? -ne 0 ]; then
-            echo $MPORT;
-            return 0;
-        fi
-    done
-}
 
 echo "Making the NOMPness Monster"
 
